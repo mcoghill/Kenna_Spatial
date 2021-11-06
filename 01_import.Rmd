@@ -42,10 +42,16 @@ There are multiple ways to go about the analysis. We have a shape for each of th
 ```{r}
 
 shp_dir <- file.path("./00_shapes")
-fencelines <- st_read(shp_dir, "./Kenna_bounds.gpkg", quiet = TRUE)
-plots <- st_read(shp_dir, "./Kenna_squares.gpkg", quiet = TRUE)
+fencelines <- st_read(file.path(shp_dir, "Kenna_bounds.gpkg"), quiet = TRUE)
+plots <- st_read(file.path(shp_dir, "Kenna_squares.gpkg"), quiet = TRUE)
 
-plot_clip <- st_intersection(plots, st_geometry(fencelines))
+plot_clip_apr <- st_intersection(
+  plots, 
+  st_geometry(dplyr::filter(fencelines, Date == "apr21")))
+
+plot_clip_oct <- st_intersection(
+  plots, 
+  st_geometry(dplyr::filter(fencelines, Date == "oct21")))
 
 ```
 
@@ -53,33 +59,36 @@ With these shapes, we can do the extractions at each raster:
 
 ```{r}
 
-low_plots <- dplyr::filter(plots, Site == 3)
-mid_plots <- dplyr::filter(plots, Site == 2)
-upp_plots <- dplyr::filter(plots, Site == 1)
+low_plot_apr <- dplyr::filter(plot_clip_apr, Site == 3)
+low_plot_oct <- dplyr::filter(plot_clip_oct, Site == 3)
+mid_plot_apr <- dplyr::filter(plot_clip_apr, Site == 2)
+mid_plot_oct <- dplyr::filter(plot_clip_oct, Site == 2)
+upp_plot_apr <- dplyr::filter(plot_clip_apr, Site == 1)
+upp_plot_oct <- dplyr::filter(plot_clip_oct, Site == 1)
 low_data <- cbind(
-  low_plots,
-  extract(low_apr21, vect(low_plots), fun = mean, na.rm = TRUE) %>% 
+  low_plot_oct,
+  extract(low_apr21, vect(low_plot_apr), fun = mean, na.rm = TRUE) %>% 
     dplyr::select(-ID) %>% 
     setNames(paste0(names(.), "_apr21")),
-  extract(low_oct21, vect(low_plots), fun = mean, na.rm = TRUE) %>% 
+  extract(low_oct21, vect(low_plot_oct), fun = mean, na.rm = TRUE) %>% 
     dplyr::select(-ID) %>% 
     setNames(paste0(names(.), "_oct21")))
 
 mid_data <- cbind(
-  mid_plots,
-  extract(mid_apr21, vect(mid_plots), fun = mean, na.rm = TRUE) %>% 
+  mid_plot_oct,
+  extract(mid_apr21, vect(mid_plot_apr), fun = mean, na.rm = TRUE) %>% 
     dplyr::select(-ID) %>% 
     setNames(paste0(names(.), "_apr21")),
-  extract(mid_apr21, vect(mid_plots), fun = mean, na.rm = TRUE) %>% 
+  extract(mid_apr21, vect(mid_plot_oct), fun = mean, na.rm = TRUE) %>% 
     dplyr::select(-ID) %>% 
     setNames(paste0(names(.), "_oct21")))
 
 upp_data <- cbind(
-  upp_plots,
-  extract(upp_apr21, vect(upp_plots), fun = mean, na.rm = TRUE) %>% 
+  upp_plot_oct,
+  extract(upp_apr21, vect(upp_plot_apr), fun = mean, na.rm = TRUE) %>% 
     dplyr::select(-ID) %>% 
     setNames(paste0(names(.), "_apr21")),
-  extract(upp_oct21, vect(upp_plots), fun = mean, na.rm = TRUE) %>% 
+  extract(upp_oct21, vect(upp_plot_oct), fun = mean, na.rm = TRUE) %>% 
     dplyr::select(-ID) %>% 
     setNames(paste0(names(.), "_oct21")))
 
