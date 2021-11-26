@@ -37,7 +37,7 @@ dir.create(out_dir, showWarnings = FALSE)
 
 ```
 
-There are multiple ways to go about the analysis. We have a shape for each of the sites so we can clip the rasters to those shapes before continuing, though the files are small enough to process without that step so we can ignore that for now. What we should do is use the shapes provided to extract layer values at each raster. Some of the shapes do interfere with the fence lines though, so first clip those to the fence lines.
+There are multiple ways to go about the analysis. We have a shape for each of the sites so we can clip the rasters to those shapes before continuing, though the files are small enough to process without that step so we can ignore that for now. What we should do is use the shapes provided to extract layer values at each raster. Some of the shapes do interfere with the fence lines though, so first reduce the size of the plots by 0.2m, then clip them to be within the fence lines:
 
 ```{r}
 
@@ -47,11 +47,15 @@ plots <- st_read(file.path(shp_dir, "Kenna_squares.gpkg"), quiet = TRUE)
 
 plot_clip_apr <- st_intersection(
   plots, 
-  st_geometry(dplyr::filter(fencelines, Date == "apr21")))
+  st_geometry(dplyr::filter(fencelines, Date == "apr21"))) %>% 
+  st_buffer(-0.1) %>% 
+  arrange(Site, PlotID)
 
 plot_clip_oct <- st_intersection(
   plots, 
-  st_geometry(dplyr::filter(fencelines, Date == "oct21")))
+  st_geometry(dplyr::filter(fencelines, Date == "oct21"))) %>% 
+  st_buffer(-0.1) %>% 
+  arrange(Site, PlotID)
 
 ```
 
@@ -67,30 +71,36 @@ upp_plot_apr <- dplyr::filter(plot_clip_apr, Site == 1)
 upp_plot_oct <- dplyr::filter(plot_clip_oct, Site == 1)
 low_data <- cbind(
   low_plot_oct,
-  extract(low_apr21, vect(low_plot_apr), fun = mean, na.rm = TRUE) %>% 
+  extract(low_apr21, vect(low_plot_apr), fun = mean, na.rm = TRUE, weights = TRUE) %>% 
+    data.frame() %>% 
     dplyr::select(-ID) %>% 
-    setNames(paste0(names(.), "_apr21")),
-  extract(low_oct21, vect(low_plot_oct), fun = mean, na.rm = TRUE) %>% 
+    setNames(paste0(names(.), "_apr_21")),
+  extract(low_oct21, vect(low_plot_oct), fun = mean, na.rm = TRUE, weights = TRUE) %>% 
+    data.frame() %>% 
     dplyr::select(-ID) %>% 
-    setNames(paste0(names(.), "_oct21")))
+    setNames(paste0(names(.), "_oct_21")))
 
 mid_data <- cbind(
   mid_plot_oct,
-  extract(mid_apr21, vect(mid_plot_apr), fun = mean, na.rm = TRUE) %>% 
+  extract(mid_apr21, vect(mid_plot_apr), fun = mean, na.rm = TRUE, weights = TRUE) %>% 
+    data.frame() %>% 
     dplyr::select(-ID) %>% 
-    setNames(paste0(names(.), "_apr21")),
-  extract(mid_apr21, vect(mid_plot_oct), fun = mean, na.rm = TRUE) %>% 
+    setNames(paste0(names(.), "_apr_21")),
+  extract(mid_oct21, vect(mid_plot_oct), fun = mean, na.rm = TRUE, weights = TRUE) %>% 
+    data.frame() %>% 
     dplyr::select(-ID) %>% 
-    setNames(paste0(names(.), "_oct21")))
+    setNames(paste0(names(.), "_oct_21")))
 
 upp_data <- cbind(
   upp_plot_oct,
-  extract(upp_apr21, vect(upp_plot_apr), fun = mean, na.rm = TRUE) %>% 
+  extract(upp_apr21, vect(upp_plot_apr), fun = mean, na.rm = TRUE, weights = TRUE) %>% 
+    data.frame() %>% 
     dplyr::select(-ID) %>% 
-    setNames(paste0(names(.), "_apr21")),
-  extract(upp_oct21, vect(upp_plot_oct), fun = mean, na.rm = TRUE) %>% 
+    setNames(paste0(names(.), "_apr_21")),
+  extract(upp_oct21, vect(upp_plot_oct), fun = mean, na.rm = TRUE, weights = TRUE) %>% 
+    data.frame() %>% 
     dplyr::select(-ID) %>% 
-    setNames(paste0(names(.), "_oct21")))
+    setNames(paste0(names(.), "_oct_21")))
 
 full_data <- st_drop_geometry(rbind(upp_data, mid_data, low_data))
 write.csv(full_data, file.path(out_dir, "multispec_data.csv"), row.names = FALSE)
